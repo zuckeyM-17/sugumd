@@ -6,7 +6,7 @@ import { THEME_CHANGE_EVENT, currentTheme } from '../theme.js'
 export const lowlight = createLowlight(common)
 
 export const LANGUAGES = [
-  ['', 'テキスト'],
+  ['', 'Plain text'],
   ['javascript', 'JavaScript'],
   ['typescript', 'TypeScript'],
   ['json', 'JSON'],
@@ -25,7 +25,7 @@ export const LANGUAGES = [
   ['css', 'CSS'],
   ['markdown', 'Markdown'],
   ['diff', 'Diff'],
-  ['mermaid', 'Mermaid（図）'],
+  ['mermaid', 'Mermaid (diagram)'],
 ]
 
 // mermaid は大きい（数 MB）ので、図を初めて描くときにだけ読み込む
@@ -43,7 +43,7 @@ function loadMermaid() {
 async function renderMermaid(target, source) {
   const seq = ++renderSeq
   if (!source.trim()) {
-    target.textContent = '図の定義を書くと、ここに表示されます'
+    target.textContent = 'Write a diagram definition and it will render here'
     target.classList.add('is-empty')
     return
   }
@@ -54,7 +54,7 @@ async function renderMermaid(target, source) {
     target.innerHTML = svg // securityLevel: 'strict' で mermaid 側がサニタイズ済み
   } catch (err) {
     target.classList.add('is-error')
-    target.textContent = `図を描けませんでした: ${String(err?.message ?? err).split('\n')[0]}`
+    target.textContent = `Could not render the diagram: ${String(err?.message ?? err).split('\n')[0]}`
     document.getElementById(`dmermaid-${seq}`)?.remove() // 失敗時に mermaid が body に残す要素
   }
 }
@@ -73,7 +73,7 @@ export const CodeBlock = CodeBlockLowlight.extend({
       header.contentEditable = 'false'
       const select = document.createElement('select')
       select.className = 'code-block-lang'
-      select.setAttribute('aria-label', 'コードの言語')
+      select.setAttribute('aria-label', 'Code language')
       header.append(select)
 
       const pre = document.createElement('pre')

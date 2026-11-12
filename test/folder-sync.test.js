@@ -11,7 +11,7 @@ describe('ファイル名', () => {
     ['議事録', '議事録'],
     ['a/b:c*?', 'a_b_c__'],
     ['末尾のドット...', '末尾のドット'],
-    ['  ', '無題'],
+    ['  ', 'Untitled'],
     ['あ'.repeat(80), 'あ'.repeat(60)],
   ])('%j → %j', (title, base) => expect(sanitizeFileBase(title)).toBe(base))
 

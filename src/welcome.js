@@ -1,37 +1,39 @@
 // 初回起動時に作る説明用ドキュメント
-export const WELCOME_MARKDOWN = `# はじめに
+export const WELCOME_MARKDOWN = `# Welcome to sugumd
 
-このエディターは、Markdown を書くとその場で見た目に変わります。書いた内容はこのブラウザに自動で保存されます。
+Write Markdown and it turns into formatted text as you type. Everything is saved in this browser automatically.
 
-## 書き方
+## Writing
 
-- 行頭で \`# \` を打つと見出し、\`- \` で箇条書き、\`1. \` で番号付きリスト
-- \`[] \` で ToDo、\`> \` で引用、\`\`\`\` \`\`\` \`\`\`\` でコードブロック
-- **太字** は \`**\`、*斜体* は \`*\` で囲む
+- Start a line with \`# \` for a heading, \`- \` for a bullet, \`1. \` for a numbered list
+- \`- [ ] \` or \`[] \` for a to-do, \`> \` for a quote, \`\`\`\` \`\`\` \`\`\`\` for a code block
+- Wrap text in \`**\` for **bold** and \`*\` for *italic*
+- Select some text and paste a URL to turn it into a link
 
-## スラッシュコマンド
+## Slash commands
 
-空いている場所で \`/\` を打つとメニューが開きます。
+Type \`/\` anywhere to open the command menu.
 
-| 打つ文字 | できること |
+| Type | What it does |
 | --- | --- |
-| /表 | マス目から行数・列数を選んで表を作る |
-| /3x4 | 3行 × 4列の表をすぐ作る |
-| /見出し | 見出しにする |
+| /table | Pick the number of rows and columns from a grid |
+| /3x4 | Insert a 3 × 4 table right away |
+| /toggle | A collapsible section |
+| /callout | A colored note box (Note, Tip, Important, Warning, Caution) |
+| /mermaid | A Mermaid diagram with a live preview |
 
-表にマウスを乗せると、下と右に「+」が出て行・列を足せます。
+Hover over a table to get **+** buttons for adding rows and columns.
 
-ほかにも \`/トグル\`（折りたたみ）、\`/callout\`（注意書きの箱）、\`/図\`（Mermaid の図）が使えます。
+## Finding things
 
-## 探す
+- \`Ctrl + K\` (\`Cmd + K\` on Mac) to jump to any document
+- \`Ctrl + F\` to find and replace within this document
+- Hover a heading in the outline on the right and click **Copy** to copy just that section
+- **☑ To-dos** in the sidebar collects every open to-do across your documents
 
-- \`Ctrl + K\`（Mac は \`Cmd + K\`）でドキュメントを探して移動
-- \`Ctrl + F\` でこのドキュメントの中を検索・置換
-- 右の目次の見出しにマウスを乗せて「コピー」で、その節だけをコピー
+## Saving and copying
 
-## 保存とコピー
-
-- 右上の「全体をコピー」で、Notion などにそのまま貼れます
-- Chrome / Edge なら「…」→「PC のフォルダにも保存する…」で、1 ドキュメントずつ .md ファイルとしてフォルダに保存できます。Dropbox などの同期フォルダを選ぶと安心です
-- それ以外のブラウザでは、データが消えたときに備えて「…」メニューからときどきバックアップを書き出してください
+- **Copy all** puts the whole document on the clipboard, ready to paste into Notion
+- The **…** menu has *Copy for Slack*, Markdown download and backups
+- In Chrome or Edge, **… → Also save to a folder** keeps a \`.md\` file per document in a folder you choose
 `

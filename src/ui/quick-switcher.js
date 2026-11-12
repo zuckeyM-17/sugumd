@@ -19,11 +19,11 @@ export function openQuickSwitcher({ search, onPick, onCreate }) {
   const dialog = document.createElement('div')
   dialog.className = 'switcher'
   dialog.setAttribute('role', 'dialog')
-  dialog.setAttribute('aria-label', 'ドキュメントを開く')
+  dialog.setAttribute('aria-label', 'Open document')
   const input = document.createElement('input')
   input.className = 'switcher-input'
-  input.placeholder = 'ドキュメントを検索…（タイトル・本文）'
-  input.setAttribute('aria-label', 'ドキュメントを検索')
+  input.placeholder = 'Search documents by title or content…'
+  input.setAttribute('aria-label', 'Search documents')
   input.setAttribute('role', 'combobox')
   input.setAttribute('aria-expanded', 'true')
   const list = document.createElement('div')
@@ -33,7 +33,7 @@ export function openQuickSwitcher({ search, onPick, onCreate }) {
   input.setAttribute('aria-controls', list.id)
   const footer = document.createElement('div')
   footer.className = 'switcher-footer'
-  footer.textContent = '↑↓ で選択 ・ Enter で開く ・ Esc で閉じる'
+  footer.textContent = '↑↓ to select · Enter to open · Esc to close'
   dialog.append(input, list, footer)
   backdrop.append(dialog)
   document.body.append(backdrop)
@@ -56,7 +56,7 @@ export function openQuickSwitcher({ search, onPick, onCreate }) {
       row.setAttribute('aria-selected', String(i === selected))
       const title = document.createElement('div')
       title.className = 'switcher-title'
-      title.textContent = item.kind === 'create' ? `＋「${item.title}」を新規作成` : item.title
+      title.textContent = item.kind === 'create' ? `+ Create “${item.title}”` : item.title
       row.append(title)
       if (item.snippet) row.append(renderSnippet(item.snippet, 'switcher-snippet'))
       row.addEventListener('mousedown', (e) => {

@@ -75,7 +75,7 @@ describe('Slack 向け変換', () => {
 
   it('コールアウトとトグル', () => {
     const md = ['> [!WARNING]', '>', '> 消さないで', '', '<details>', '<summary>詳細</summary>', '', '中身', '', '</details>'].join('\n')
-    expect(toSlackMrkdwn(md)).toBe(['> *注意*', '> ', '> 消さないで', '', '*詳細*', '', '中身'].join('\n'))
+    expect(toSlackMrkdwn(md)).toBe(['> *Warning*', '> ', '> 消さないで', '', '*詳細*', '', '中身'].join('\n'))
   })
 
   it('閉じていないコードブロックは閉じる', () => {

@@ -98,7 +98,7 @@ export function deriveTitle(markdown) {
   const lines = markdown.split('\n').map((l) => l.trim()).filter(Boolean)
   const heading = lines.find((l) => /^#{1,6}\s+\S/.test(l))
   const line = heading ?? lines[0]
-  if (!line) return '無題'
+  if (!line) return 'Untitled'
   const text = line
     .replace(/^#{1,6}\s+/, '')
     .replace(/^([-*+]|\d+\.)\s+(\[[ xX]\]\s+)?/, '')
@@ -106,7 +106,7 @@ export function deriveTitle(markdown) {
     .replace(/[*_`~]/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .trim()
-  return text || '無題'
+  return text || 'Untitled'
 }
 
 export function listDocs(state) {
@@ -131,7 +131,7 @@ export function exportBackup(state, now) {
  */
 export function importBackup(state, data) {
   if (data == null || data.format !== BACKUP_FORMAT || !Array.isArray(data.docs)) {
-    throw new Error('このファイルは sugumd のバックアップではありません')
+    throw new Error('This file is not a sugumd backup')
   }
   const docs = { ...state.docs }
   let added = 0

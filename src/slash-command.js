@@ -7,32 +7,32 @@ import { openTablePicker } from './table-picker.js'
 import { CALLOUT_TYPES } from './extensions/callout.js'
 
 export const COMMANDS = [
-  { id: 'h1', label: '見出し1', hint: '#', keywords: ['h1', 'heading', 'midashi'], run: (c) => c.setNode('heading', { level: 1 }) },
-  { id: 'h2', label: '見出し2', hint: '##', keywords: ['h2', 'heading', 'midashi'], run: (c) => c.setNode('heading', { level: 2 }) },
-  { id: 'h3', label: '見出し3', hint: '###', keywords: ['h3', 'heading', 'midashi'], run: (c) => c.setNode('heading', { level: 3 }) },
-  { id: 'table', label: 'テーブル', hint: '/3x4 でサイズ指定', keywords: ['table', 'hyou', '表'], run: null },
-  { id: 'bullet', label: '箇条書き', hint: '-', keywords: ['bullet', 'list', 'ul'], run: (c) => c.toggleBulletList() },
-  { id: 'ordered', label: '番号付きリスト', hint: '1.', keywords: ['number', 'ordered', 'ol', 'list'], run: (c) => c.toggleOrderedList() },
-  { id: 'todo', label: 'ToDo リスト', hint: '[]', keywords: ['todo', 'task', 'check'], run: (c) => c.toggleTaskList() },
-  { id: 'quote', label: '引用', hint: '>', keywords: ['quote', 'blockquote', 'inyou'], run: (c) => c.toggleBlockquote() },
-  { id: 'code', label: 'コードブロック', hint: '```', keywords: ['code', 'pre'], run: (c) => c.toggleCodeBlock() },
-  { id: 'hr', label: '区切り線', hint: '---', keywords: ['hr', 'divider', 'line'], run: (c) => c.setHorizontalRule() },
-  { id: 'toggle', label: 'トグル', hint: '<details>', keywords: ['toggle', 'details', 'fold', '折りたたみ', 'toguru'], run: (c) => c.setDetails() },
+  { id: 'h1', label: 'Heading 1', hint: '#', keywords: ['h1', 'heading', 'title', '見出し'], run: (c) => c.setNode('heading', { level: 1 }) },
+  { id: 'h2', label: 'Heading 2', hint: '##', keywords: ['h2', 'heading', 'subtitle', '見出し'], run: (c) => c.setNode('heading', { level: 2 }) },
+  { id: 'h3', label: 'Heading 3', hint: '###', keywords: ['h3', 'heading', '見出し'], run: (c) => c.setNode('heading', { level: 3 }) },
+  { id: 'table', label: 'Table', hint: '/3x4 for size', keywords: ['table', 'grid', '表', 'テーブル'], run: null },
+  { id: 'bullet', label: 'Bulleted list', hint: '-', keywords: ['bullet', 'list', 'ul', '箇条書き'], run: (c) => c.toggleBulletList() },
+  { id: 'ordered', label: 'Numbered list', hint: '1.', keywords: ['number', 'ordered', 'ol', 'list', '番号'], run: (c) => c.toggleOrderedList() },
+  { id: 'todo', label: 'To-do list', hint: '[]', keywords: ['todo', 'task', 'check', 'checkbox'], run: (c) => c.toggleTaskList() },
+  { id: 'quote', label: 'Quote', hint: '>', keywords: ['quote', 'blockquote', '引用'], run: (c) => c.toggleBlockquote() },
+  { id: 'code', label: 'Code block', hint: '```', keywords: ['code', 'pre', 'コード'], run: (c) => c.toggleCodeBlock() },
+  { id: 'hr', label: 'Divider', hint: '---', keywords: ['hr', 'divider', 'line', '区切り'], run: (c) => c.setHorizontalRule() },
+  { id: 'toggle', label: 'Toggle', hint: '<details>', keywords: ['toggle', 'details', 'collapse', 'fold', 'トグル', '折りたたみ'], run: (c) => c.setDetails() },
   ...Object.entries(CALLOUT_TYPES).map(([type, label]) => ({
     id: `callout-${type.toLowerCase()}`,
-    label: `コールアウト（${label}）`,
+    label: `Callout: ${label}`,
     hint: `> [!${type}]`,
-    keywords: ['callout', 'alert', 'note', type.toLowerCase(), label, 'コールアウト'],
+    keywords: ['callout', 'alert', type.toLowerCase(), 'コールアウト'],
     // GitHub と同じく、印は 1 行目に単独で置く（印の段落と本文の段落に分ける）
     run: (c) => c.toggleBlockquote().insertContent(`[!${type}]`).splitBlock(),
   })),
   {
     id: 'mermaid',
-    label: 'Mermaid 図',
+    label: 'Mermaid diagram',
     hint: '```mermaid',
-    keywords: ['mermaid', 'diagram', 'chart', 'flow', '図', 'フロー'],
+    keywords: ['mermaid', 'diagram', 'chart', 'flowchart', '図'],
     run: (c) => c.setCodeBlock({ language: 'mermaid' }).command(({ tr }) => {
-      tr.insertText('flowchart LR\n  A[開始] --> B[処理] --> C[終了]')
+      tr.insertText('flowchart LR\n  A[Start] --> B[Process] --> C[End]')
       return true
     }),
   },
@@ -46,7 +46,7 @@ export function filterCommands(query, { inTable = false } = {}) {
   const size = parseTableSize(query)
   if (size && inTable) return []
   if (size) {
-    return [{ id: 'table-sized', label: `テーブル ${size.rows}行 × ${size.cols}列`, hint: '1行目は見出し行', size }]
+    return [{ id: 'table-sized', label: `Table ${size.rows} rows × ${size.cols} columns`, hint: 'first row is the header', size }]
   }
   const q = query.trim().toLowerCase()
   const available = inTable ? COMMANDS.filter((cmd) => cmd.id !== 'table') : COMMANDS
@@ -91,7 +91,7 @@ function createMenuRenderer() {
     if (items.length === 0) {
       const empty = document.createElement('div')
       empty.className = 'slash-empty'
-      empty.textContent = '該当するコマンドがありません'
+      empty.textContent = 'No matching commands'
       el.append(empty)
       return
     }

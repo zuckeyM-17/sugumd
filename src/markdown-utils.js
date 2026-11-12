@@ -22,7 +22,7 @@ export const MAX_TABLE_ROWS = 50
 export const MAX_TABLE_COLS = 20
 
 export function parseTableSize(query) {
-  const m = /^(?:table|tbl|表|テーブル|ひょう)?\s*(\d{1,2})\s*[x×*]\s*(\d{1,2})$/i.exec(query.trim())
+  const m = /^(?:table|tbl|t|表|テーブル)?\s*(\d{1,2})\s*[x×*]\s*(\d{1,2})$/i.exec(query.trim())
   if (!m) return null
   const rows = Number(m[1])
   const cols = Number(m[2])

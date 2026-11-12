@@ -16,7 +16,7 @@ export function sanitizeFileBase(title) {
     .replace(/[. ]+$/, '') // Windows は末尾のドット・空白を許さない
     .slice(0, 60)
     .trim()
-  return base || '無題'
+  return base || 'Untitled'
 }
 
 /**

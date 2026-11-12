@@ -103,8 +103,8 @@ describe('deriveTitle', () => {
     ['前置き\n## 中見出し', '中見出し'],
     ['- [ ] **やること**', 'やること'],
     ['[リンク](https://example.com) です', 'リンク です'],
-    ['', '無題'],
-    ['\n\n  \n', '無題'],
+    ['', 'Untitled'],
+    ['\n\n  \n', 'Untitled'],
   ])('%j → %s', (md, title) => {
     expect(deriveTitle(md)).toBe(title)
   })

@@ -5,11 +5,11 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 export const CALLOUT_TYPES = {
-  NOTE: 'メモ',
-  TIP: 'ヒント',
-  IMPORTANT: '重要',
-  WARNING: '注意',
-  CAUTION: '警告',
+  NOTE: 'Note',
+  TIP: 'Tip',
+  IMPORTANT: 'Important',
+  WARNING: 'Warning',
+  CAUTION: 'Caution',
 }
 
 const MARKER_RE = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i

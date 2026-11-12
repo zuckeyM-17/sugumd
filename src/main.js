@@ -40,7 +40,7 @@ const els = {
   toc: $('#toc'),
   saveStatus: $('#save-status'),
   copyAll: $('#copy-all'),
-  toggleRaw: $('#toggle-raw'),
+  modeToggle: $('#mode-toggle'),
   toggleSidebar: $('#toggle-sidebar'),
   menu: $('#more-menu'),
   importInput: $('#import-input'),
@@ -72,7 +72,7 @@ if (!state.currentId) state = selectDoc(state, listDocs(state)[0].id)
 persist()
 
 if (recovered) {
-  toast('保存データが読めなかったため、退避して新しく始めました（退避先: ' + STORAGE_KEY + ':corrupt-…）', 8000)
+  toast('Saved data could not be read, so it was set aside and a fresh start was made (kept under ' + STORAGE_KEY + ':corrupt-…)', 8000)
 }
 // ブラウザに「このサイトのデータを勝手に消さないで」と頼む（対応ブラウザのみ）
 navigator.storage?.persist?.().catch(() => {})
@@ -104,14 +104,14 @@ function currentMarkdown() {
 function persist() {
   const result = saveState(storage, state)
   if (!result.ok) {
-    setSaveStatus('保存に失敗しました', true)
-    toast('ブラウザへの保存に失敗しました。容量不足の可能性があります。「…」メニューからバックアップを書き出してください。', 10000)
+    setSaveStatus('Save failed', true)
+    toast('Could not save to the browser, possibly because storage is full. Export a backup from the … menu.', 10000)
   }
   return result.ok
 }
 
 function scheduleSave() {
-  setSaveStatus('編集中…')
+  setSaveStatus('Editing…')
   clearTimeout(saveTimer)
   saveTimer = setTimeout(flushSave, 500)
 }
@@ -126,11 +126,11 @@ function flushSave() {
   if (!doc) return
   const next = updateDocContent(state, doc.id, currentMarkdown(), Date.now())
   if (next === state) {
-    setSaveStatus('保存済み')
+    setSaveStatus('Saved')
     return
   }
   state = next
-  if (persist()) setSaveStatus('保存済み')
+  if (persist()) setSaveStatus('Saved')
   folder.saveDoc(currentDoc())
   renderDocList()
 }
@@ -168,7 +168,7 @@ function renderDocList() {
   if (query && docs.length === 0) {
     const empty = document.createElement('li')
     empty.className = 'doc-empty'
-    empty.textContent = '見つかりませんでした'
+    empty.textContent = 'No matches'
     els.docList.append(empty)
   }
   updateTodoButton()
@@ -194,8 +194,8 @@ function renderDocList() {
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'doc-delete'
-    del.title = '削除'
-    del.setAttribute('aria-label', `「${doc.title}」を削除`)
+    del.title = 'Delete'
+    del.setAttribute('aria-label', `Delete “${doc.title}”`)
     del.textContent = '×'
     del.addEventListener('click', () => removeDoc(doc.id, doc.title))
 
@@ -224,7 +224,7 @@ function loadIntoEditor() {
   els.scroll.scrollTop = 0
   pinnedTocIndex = null
   renderToc()
-  setSaveStatus('保存済み')
+  setSaveStatus('Saved')
 }
 
 function addDoc(content = '') {
@@ -248,8 +248,8 @@ function focusEditor(position) {
 }
 
 function removeDoc(id, title) {
-  const fileNote = folder.connected ? '\nフォルダの .md ファイルも削除されます。' : ''
-  if (!window.confirm(`「${title}」を削除しますか？${fileNote}\nこの操作は取り消せません。`)) return
+  const fileNote = folder.connected ? '\nThe .md file in the folder will be deleted too.' : ''
+  if (!window.confirm(`Delete “${title}”?${fileNote}\nThis cannot be undone.`)) return
   if (id === state.currentId) {
     clearTimeout(saveTimer)
     saveTimer = null
@@ -269,7 +269,7 @@ function formatTime(ts) {
   const sameDay = d.toDateString() === now.toDateString()
   const pad = (n) => String(n).padStart(2, '0')
   const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`
-  if (sameDay) return `今日 ${hm}`
+  if (sameDay) return `Today ${hm}`
   return `${d.getFullYear() === now.getFullYear() ? '' : d.getFullYear() + '/'}${d.getMonth() + 1}/${d.getDate()} ${hm}`
 }
 
@@ -285,15 +285,15 @@ function renderToc() {
   headingCache = extractHeadings(editor.state.doc)
   els.toc.innerHTML = ''
   if (todoViewOpen) {
-    els.toc.append(note('ToDo 一覧を表示中です'))
+    els.toc.append(note('Showing to-dos'))
     return
   }
   if (rawMode) {
-    els.toc.append(note('Markdown表示中は目次を使えません'))
+    els.toc.append(note('The outline is not available in Markdown mode'))
     return
   }
   if (headingCache.length === 0) {
-    els.toc.append(note('# で見出しを書くと、ここに目次が出ます'))
+    els.toc.append(note('Headings you write with # will appear here'))
     return
   }
   const minLevel = Math.min(...headingCache.map((h) => h.level))
@@ -319,9 +319,9 @@ function renderToc() {
     const copy = document.createElement('button')
     copy.type = 'button'
     copy.className = 'toc-copy'
-    copy.textContent = 'コピー'
-    copy.title = 'この見出しの節（次の同じレベルの見出しまで）をコピー'
-    copy.setAttribute('aria-label', `「${h.text}」の節をコピー`)
+    copy.textContent = 'Copy'
+    copy.title = 'Copy this section (up to the next heading of the same level)'
+    copy.setAttribute('aria-label', `Copy section “${h.text}”`)
     copy.addEventListener('click', () => copySection(i))
     row.append(a, copy)
     els.toc.append(row)
@@ -380,8 +380,7 @@ function setRawMode(on) {
   }
   els.editor.hidden = on
   els.raw.hidden = !on
-  els.toggleRaw.textContent = on ? '編集表示に戻る' : 'Markdown表示'
-  els.toggleRaw.setAttribute('aria-pressed', String(on))
+  syncModeToggle()
   tableControls.reset()
   if (on && findPanel.isOpen) findPanel.close()
   renderToc()
@@ -390,7 +389,27 @@ function setRawMode(on) {
 }
 
 els.raw.addEventListener('input', scheduleSave)
-els.toggleRaw.addEventListener('click', () => setRawMode(!rawMode))
+// Rich / Markdown の切り替え（ラジオボタン相当のセグメント）
+function syncModeToggle() {
+  const mode = rawMode ? 'markdown' : 'rich'
+  els.modeToggle.dataset.mode = mode
+  els.modeToggle.querySelectorAll('[data-mode]').forEach((btn) => {
+    const selected = btn.dataset.mode === mode
+    btn.setAttribute('aria-checked', String(selected))
+    btn.tabIndex = selected ? 0 : -1
+  })
+}
+
+els.modeToggle.addEventListener('click', (e) => {
+  const mode = e.target instanceof Element ? e.target.closest('button[data-mode]')?.dataset.mode : null
+  if (mode && (mode === 'markdown') !== rawMode) setRawMode(mode === 'markdown')
+})
+els.modeToggle.addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return
+  e.preventDefault()
+  setRawMode(!rawMode)
+  els.modeToggle.querySelector(`[data-mode="${rawMode ? 'markdown' : 'rich'}"]`)?.focus()
+})
 
 // ---------- コピー・書き出し ----------
 async function copyAll({ markdownOnly = false } = {}) {
@@ -400,7 +419,7 @@ async function copyAll({ markdownOnly = false } = {}) {
   await writeClipboard({
     markdown,
     html: markdownOnly ? null : editor.getHTML(),
-    message: markdownOnly ? 'Markdown テキストをコピーしました' : '全体をコピーしました（Notion にそのまま貼れます）',
+    message: markdownOnly ? 'Copied as Markdown text' : 'Copied everything (ready to paste into Notion)',
   })
 }
 
@@ -409,7 +428,7 @@ function copySection(index) {
   const range = heading && sectionRange(editor.state.doc, heading.pos)
   if (!range) return
   const { markdown, html } = serializeRange(editor, range.from, range.to)
-  writeClipboard({ markdown, html, message: `「${heading.text}」の節をコピーしました` })
+  writeClipboard({ markdown, html, message: `Copied section “${heading.text}”` })
 }
 
 /** Markdown（text/plain）と HTML（text/html）を一緒に載せる。HTML があると Notion などで見出しや表が再現される。 */
@@ -440,7 +459,7 @@ function legacyCopy(text) {
   ta.select()
   const ok = document.execCommand('copy')
   ta.remove()
-  toast(ok ? 'Markdown テキストをコピーしました' : 'コピーできませんでした。ブラウザの権限設定を確認してください')
+  toast(ok ? 'Copied as Markdown text' : 'Could not copy. Check your browser’s clipboard permissions.')
 }
 
 function download(filename, text, type) {
@@ -469,7 +488,7 @@ const menuActions = {
     writeClipboard({
       markdown: toSlackMrkdwn(currentMarkdown()),
       html: null,
-      message: 'Slack 向けの書式でコピーしました',
+      message: 'Copied with Slack formatting',
     })
   },
   'download-md': () => {
@@ -480,7 +499,7 @@ const menuActions = {
   'export-backup': () => {
     flushSave()
     download(`sugumd-backup-${timestamp()}.json`, JSON.stringify(exportBackup(state, Date.now()), null, 2), 'application/json')
-    toast('全ドキュメントのバックアップを書き出しました')
+    toast('Exported a backup of all documents')
   },
   'import-backup': () => els.importInput.click(),
   'theme-system': () => theme.setPreference('system'),
@@ -489,7 +508,7 @@ const menuActions = {
   'folder-choose': () => folder.choose().catch(folderError),
   'folder-disconnect': () => {
     folder.disconnect()
-    toast('フォルダとの接続を解除しました（フォルダ内のファイルはそのまま残ります）')
+    toast('Disconnected the folder (files in it are kept)')
   },
 }
 
@@ -515,9 +534,9 @@ els.importInput.addEventListener('change', async () => {
     loadIntoEditor()
     renderDocList()
     folder.resync()
-    toast(`復元しました: 追加 ${result.added} 件 / 更新 ${result.updated} 件 / 変更なし ${result.skipped} 件`, 6000)
+    toast(`Restored: ${result.added} added, ${result.updated} updated, ${result.skipped} unchanged`, 6000)
   } catch (err) {
-    toast(`復元できませんでした: ${err.message}`, 6000)
+    toast(`Could not restore: ${err.message}`, 6000)
   }
 })
 
@@ -553,10 +572,13 @@ document.addEventListener('keydown', (e) => {
   const mod = e.metaKey || e.ctrlKey
   if (!mod || e.isComposing) return
   const key = e.key.toLowerCase()
-  if (key === 's') {
+  if (key === 'm' && e.shiftKey) {
+    e.preventDefault()
+    setRawMode(!rawMode)
+  } else if (key === 's') {
     e.preventDefault()
     flushSave()
-    toast('保存しました')
+    toast('Saved')
   } else if (key === 'k' && !e.shiftKey && !e.altKey) {
     e.preventDefault()
     if (!isQuickSwitcherOpen()) showQuickSwitcher()
@@ -589,7 +611,7 @@ let todoJustChanged = new Set()
 
 function updateTodoButton() {
   const n = countOpenTodos(state.docs)
-  els.todoButton.textContent = n ? `☑ ToDo 一覧（${n}）` : '☑ ToDo 一覧'
+  els.todoButton.textContent = n ? `☑ To-dos (${n})` : '☑ To-dos'
 }
 
 function openTodoView() {
@@ -623,7 +645,7 @@ function renderTodoView() {
   const header = document.createElement('div')
   header.className = 'todo-header'
   const h = document.createElement('h1')
-  h.textContent = 'ToDo 一覧'
+  h.textContent = 'To-dos'
   const showDone = document.createElement('label')
   showDone.className = 'todo-show-done'
   const showDoneInput = document.createElement('input')
@@ -633,11 +655,11 @@ function renderTodoView() {
     todoIncludeDone = showDoneInput.checked
     renderTodoView()
   })
-  showDone.append(showDoneInput, document.createTextNode(' 完了済みも表示'))
+  showDone.append(showDoneInput, document.createTextNode(' Show completed'))
   const close = document.createElement('button')
   close.type = 'button'
   close.className = 'btn btn-ghost'
-  close.textContent = '閉じる'
+  close.textContent = 'Close'
   close.addEventListener('click', () => {
     closeTodoView()
     focusEditor()
@@ -656,8 +678,8 @@ function renderTodoView() {
     const empty = document.createElement('p')
     empty.className = 'todo-empty'
     empty.textContent = todoIncludeDone
-      ? 'ToDo はまだありません。本文で「[] 」と打つと ToDo になります。'
-      : '未完了の ToDo はありません 🎉'
+      ? 'No to-dos yet. Type “[] ” or “- [ ] ” in a document to add one.'
+      : 'All done 🎉'
     view.append(empty)
     return
   }
@@ -684,8 +706,8 @@ function renderTodoView() {
       const text = document.createElement('button')
       text.type = 'button'
       text.className = 'todo-text'
-      text.textContent = todo.text || '（空の ToDo）'
-      text.title = 'このドキュメントを開く'
+      text.textContent = todo.text || '(empty to-do)'
+      text.title = 'Open in document'
       text.addEventListener('click', () => jumpToTodo(group.id, todo.line))
       li.append(box, text)
       list.append(li)
@@ -700,7 +722,7 @@ function toggleTodo(id, line, checked) {
   const doc = state.docs[id]
   const next = doc && setTodoChecked(doc.content, line, checked)
   if (!next) {
-    toast('ドキュメントが変わっていたため、一覧を更新しました')
+    toast('The document had changed, so the list was refreshed')
     renderTodoView()
     return
   }
@@ -751,15 +773,15 @@ els.todoButton.addEventListener('click', () => (todoViewOpen ? closeTodoView() :
 
 // ---------- フォルダ保存 ----------
 const FOLDER_LABELS = {
-  syncing: (name) => `📁 ${name} と同期中…`,
+  syncing: (name) => `📁 Syncing ${name}…`,
   connected: (name) => `📁 ${name}`,
-  reconnect: () => '📁 フォルダに再接続',
-  error: () => '📁 フォルダに保存できません',
+  reconnect: () => '📁 Reconnect folder',
+  error: () => '📁 Folder save failed',
 }
 
 function folderError(err) {
   console.error(err)
-  toast(`フォルダに保存できませんでした: ${err?.message ?? err}`, 8000)
+  toast(`Could not save to the folder: ${err?.message ?? err}`, 8000)
 }
 
 function renderFolderStatus({ status, folderName }) {
@@ -769,19 +791,19 @@ function renderFolderStatus({ status, folderName }) {
   els.folderStatus.dataset.status = status
   els.folderStatus.title =
     status === 'connected'
-      ? `「${folderName}」フォルダに .md ファイルとして保存しています`
+      ? `Saving as .md files in “${folderName}”`
       : status === 'reconnect'
-        ? 'ブラウザを開き直したため、フォルダへのアクセス許可が必要です'
+        ? 'The browser was reopened, so folder access needs to be granted again'
         : status === 'error'
-          ? 'クリックすると再接続します'
+          ? 'Click to reconnect'
           : ''
   const supported = status !== 'unsupported'
   els.folderChoose.disabled = !supported
   els.folderChoose.textContent = !supported
-    ? 'フォルダに保存（Chrome / Edge のみ）'
+    ? 'Save to a folder (Chrome / Edge only)'
     : status === 'none'
-      ? 'PC のフォルダにも保存する…'
-      : '保存先フォルダを変更…'
+      ? 'Also save to a folder…'
+      : 'Change folder…'
   els.folderDisconnect.hidden = status === 'none' || status === 'unsupported'
 }
 
@@ -801,9 +823,9 @@ const folder = createFolderController({
   onError: folderError,
   onSynced(plan) {
     const parts = []
-    if (plan.upserts.length) parts.push(`フォルダから ${plan.upserts.length} 件取り込み`)
-    if (plan.writes.length) parts.push(`${plan.writes.length} 件書き出し`)
-    if (parts.length) toast(`フォルダと同期しました（${parts.join('、')}）`, 4000)
+    if (plan.upserts.length) parts.push(`${plan.upserts.length} imported`)
+    if (plan.writes.length) parts.push(`${plan.writes.length} written`)
+    if (parts.length) toast(`Synced with folder (${parts.join(', ')})`, 4000)
   },
 })
 
@@ -816,5 +838,5 @@ els.folderStatus.addEventListener('click', () => {
 // ---------- 初期描画 ----------
 renderDocList()
 renderToc()
-setSaveStatus('保存済み')
+setSaveStatus('Saved')
 folder.init().catch(folderError)

@@ -8,18 +8,18 @@ export function setupFindPanel(editor, container) {
   panel.setAttribute('role', 'search')
   panel.innerHTML = `
     <div class="find-row">
-      <input class="find-input" type="text" placeholder="検索" aria-label="ドキュメント内を検索" />
+      <input class="find-input" type="text" placeholder="Find" aria-label="Find in document" />
       <span class="find-count" aria-live="polite"></span>
-      <button type="button" class="find-btn" data-find="case" aria-pressed="false" title="大文字と小文字を区別">Aa</button>
-      <button type="button" class="find-btn" data-find="prev" title="前へ（Shift+Enter）" aria-label="前の一致">↑</button>
-      <button type="button" class="find-btn" data-find="next" title="次へ（Enter）" aria-label="次の一致">↓</button>
-      <button type="button" class="find-btn" data-find="toggle-replace" title="置換（Ctrl+H）" aria-label="置換を表示">⇄</button>
-      <button type="button" class="find-btn" data-find="close" title="閉じる（Esc）" aria-label="検索を閉じる">×</button>
+      <button type="button" class="find-btn" data-find="case" aria-pressed="false" title="Match case">Aa</button>
+      <button type="button" class="find-btn" data-find="prev" title="Previous (Shift+Enter)" aria-label="Previous match">↑</button>
+      <button type="button" class="find-btn" data-find="next" title="Next (Enter)" aria-label="Next match">↓</button>
+      <button type="button" class="find-btn" data-find="toggle-replace" title="Replace (Ctrl+H)" aria-label="Show replace">⇄</button>
+      <button type="button" class="find-btn" data-find="close" title="Close (Esc)" aria-label="Close find">×</button>
     </div>
     <div class="find-row replace-row" hidden>
-      <input class="replace-input" type="text" placeholder="置換後の文字" aria-label="置換後の文字" />
-      <button type="button" class="find-btn find-btn-text" data-find="replace">置換</button>
-      <button type="button" class="find-btn find-btn-text" data-find="replace-all">すべて置換</button>
+      <input class="replace-input" type="text" placeholder="Replace with" aria-label="Replace with" />
+      <button type="button" class="find-btn find-btn-text" data-find="replace">Replace</button>
+      <button type="button" class="find-btn find-btn-text" data-find="replace-all">Replace all</button>
     </div>`
   container.append(panel)
 
@@ -37,7 +37,7 @@ export function setupFindPanel(editor, container) {
   function updateCount() {
     const { matches, current } = state()
     const q = findInput.value
-    count.textContent = !q ? '' : matches.length ? `${current + 1} / ${matches.length}` : '0 件'
+    count.textContent = !q ? '' : matches.length ? `${current + 1} / ${matches.length}` : 'No results'
     count.classList.toggle('is-none', Boolean(q) && matches.length === 0)
   }
 
@@ -114,7 +114,7 @@ export function setupFindPanel(editor, container) {
       const n = state().matches.length
       if (editor.commands.replaceAll(replaceInput.value)) {
         updateCount()
-        count.textContent = `${n} 件置換`
+        count.textContent = `Replaced ${n}`
       }
     }
   })

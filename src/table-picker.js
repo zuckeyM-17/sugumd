@@ -18,7 +18,7 @@ export function openTablePicker({ x, y, onPick, onCancel }) {
   const el = document.createElement('div')
   el.className = 'table-picker'
   el.setAttribute('role', 'dialog')
-  el.setAttribute('aria-label', 'テーブルのサイズを選ぶ')
+  el.setAttribute('aria-label', 'Choose table size')
   el.tabIndex = -1
 
   const grid = document.createElement('div')
@@ -45,18 +45,18 @@ export function openTablePicker({ x, y, onPick, onCancel }) {
 
   const footer = document.createElement('div')
   footer.className = 'table-picker-footer'
-  const rowsInput = numberInput(MAX_TABLE_ROWS, '行数')
-  const colsInput = numberInput(MAX_TABLE_COLS, '列数')
+  const rowsInput = numberInput(MAX_TABLE_ROWS, 'Rows')
+  const colsInput = numberInput(MAX_TABLE_COLS, 'Columns')
   const ok = document.createElement('button')
   ok.type = 'button'
   ok.className = 'btn btn-primary btn-small'
-  ok.textContent = '挿入'
+  ok.textContent = 'Insert'
   ok.addEventListener('click', () => pick())
-  footer.append(rowsInput, text('行 ×'), colsInput, text('列'), ok)
+  footer.append(rowsInput, text('rows ×'), colsInput, text('cols'), ok)
 
   const note = document.createElement('div')
   note.className = 'table-picker-note'
-  note.textContent = '1行目は見出し行になります'
+  note.textContent = 'The first row becomes the header'
 
   el.append(grid, footer, note)
   document.body.append(el)

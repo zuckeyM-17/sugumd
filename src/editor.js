@@ -10,6 +10,7 @@ import { CodeBlock } from './extensions/code-block.js'
 import { Callout, unescapeCalloutMarkers } from './extensions/callout.js'
 import { MarkdownDetails, MarkdownDetailsContent, MarkdownDetailsSummary } from './extensions/details.js'
 import { FindReplace } from './extensions/find-replace.js'
+import { TaskShortcut } from './extensions/task-shortcut.js'
 
 export function buildExtensions({ withSlashCommand } = {}) {
   const extensions = [
@@ -22,6 +23,7 @@ export function buildExtensions({ withSlashCommand } = {}) {
     TableKit.configure({ table: { resizable: false } }),
     TaskList,
     TaskItem.configure({ nested: true }),
+    TaskShortcut,
     MarkdownDetails,
     MarkdownDetailsSummary,
     MarkdownDetailsContent,
@@ -30,9 +32,9 @@ export function buildExtensions({ withSlashCommand } = {}) {
     Placeholder.configure({
       includeChildren: true,
       placeholder: ({ node }) => {
-        if (node.type.name === 'heading') return '見出し'
-        if (node.type.name === 'detailsSummary') return 'トグルの見出し'
-        return '「/」でコマンド。# で見出し、- で箇条書き、/3x4 で表'
+        if (node.type.name === 'heading') return 'Heading'
+        if (node.type.name === 'detailsSummary') return 'Toggle title'
+        return "Type '/' for commands, '# ' for a heading, '- ' for a list, '/3x4' for a table"
       },
     }),
     Markdown,

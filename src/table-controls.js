@@ -41,13 +41,13 @@ export function appendColumn(editor, tablePos) {
 }
 
 const TOOLBAR_ACTIONS = [
-  { label: '↑ 行を追加', title: '上に行を追加', run: (c) => c.addRowBefore() },
-  { label: '↓ 行を追加', title: '下に行を追加', run: (c) => c.addRowAfter() },
-  { label: '← 列を追加', title: '左に列を追加', run: (c) => c.addColumnBefore() },
-  { label: '→ 列を追加', title: '右に列を追加', run: (c) => c.addColumnAfter() },
-  { label: '行を削除', title: 'カーソルのある行を削除', run: (c) => c.deleteRow(), danger: true },
-  { label: '列を削除', title: 'カーソルのある列を削除', run: (c) => c.deleteColumn(), danger: true },
-  { label: '表を削除', title: '表全体を削除', run: (c) => c.deleteTable(), danger: true },
+  { label: 'Insert row above', title: 'Insert a row above', run: (c) => c.addRowBefore() },
+  { label: 'Insert row below', title: 'Insert a row below', run: (c) => c.addRowAfter() },
+  { label: 'Insert column left', title: 'Insert a column to the left', run: (c) => c.addColumnBefore() },
+  { label: 'Insert column right', title: 'Insert a column to the right', run: (c) => c.addColumnAfter() },
+  { label: 'Delete row', title: 'Delete the row with the cursor', run: (c) => c.deleteRow(), danger: true },
+  { label: 'Delete column', title: 'Delete the column with the cursor', run: (c) => c.deleteColumn(), danger: true },
+  { label: 'Delete table', title: 'Delete the whole table', run: (c) => c.deleteTable(), danger: true },
 ]
 
 export function setupTableControls(editor, container) {
@@ -59,10 +59,10 @@ export function setupTableControls(editor, container) {
   const trigger = document.createElement('button')
   trigger.type = 'button'
   trigger.className = 'table-toolbar-trigger'
-  trigger.textContent = '表 ▾'
+  trigger.textContent = 'Table ▾'
   trigger.setAttribute('aria-haspopup', 'menu')
   trigger.setAttribute('aria-expanded', 'false')
-  trigger.title = '行・列の追加と削除'
+  trigger.title = 'Add or delete rows and columns'
   const menu = document.createElement('div')
   menu.className = 'table-toolbar-menu'
   menu.setAttribute('role', 'menu')
@@ -92,8 +92,8 @@ export function setupTableControls(editor, container) {
     trigger.setAttribute('aria-expanded', String(open))
   }
 
-  const addRowBtn = edgeButton('table-add-row', '行を末尾に追加')
-  const addColBtn = edgeButton('table-add-col', '列を末尾に追加')
+  const addRowBtn = edgeButton('table-add-row', 'Add a row at the end')
+  const addColBtn = edgeButton('table-add-col', 'Add a column at the end')
   container.append(toolbar, addRowBtn, addColBtn)
 
   let hoveredTablePos = null

@@ -120,6 +120,26 @@ button {
 .spacer {
   flex: 1;
 }
+.folder-status {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.folder-status[data-status='reconnect'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.folder-status[data-status='error'] {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.menu-list button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  background: none;
+}
 .only-narrow {
   display: none;
 }

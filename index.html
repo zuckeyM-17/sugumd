@@ -13,6 +13,7 @@
       <span class="brand">sugumd</span>
       <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
       <span class="spacer"></span>
+      <button id="folder-status" class="btn btn-ghost folder-status" type="button" hidden></button>
       <button id="toggle-raw" class="btn btn-ghost" type="button" aria-pressed="false">Markdown表示</button>
       <button id="copy-all" class="btn btn-primary" type="button">全体をコピー</button>
       <details id="more-menu" class="menu">
@@ -23,6 +24,9 @@
           <hr />
           <button type="button" role="menuitem" data-action="export-backup">全ドキュメントのバックアップを書き出す</button>
           <button type="button" role="menuitem" data-action="import-backup">バックアップから復元…</button>
+          <hr />
+          <button type="button" role="menuitem" data-action="folder-choose">PC のフォルダにも保存する…</button>
+          <button type="button" role="menuitem" data-action="folder-disconnect" hidden>フォルダとの接続を解除</button>
         </div>
       </details>
       <input id="import-input" type="file" accept="application/json,.json" hidden />

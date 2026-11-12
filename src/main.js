@@ -18,6 +18,7 @@ import {
   updateDocContent,
 } from './store.js'
 import { WELCOME_MARKDOWN } from './welcome.js'
+import { createFolderController } from './folder-controller.js'
 
 const $ = (sel) => document.querySelector(sel)
 const els = {
@@ -34,6 +35,9 @@ const els = {
   menu: $('#more-menu'),
   importInput: $('#import-input'),
   toast: $('#toast'),
+  folderStatus: $('#folder-status'),
+  folderChoose: $('[data-action="folder-choose"]'),
+  folderDisconnect: $('[data-action="folder-disconnect"]'),
 }
 
 const storage = window.localStorage
@@ -106,6 +110,7 @@ function flushSave() {
   }
   state = next
   if (persist()) setSaveStatus('保存済み')
+  folder.saveDoc(currentDoc())
   renderDocList()
 }
 
@@ -208,13 +213,15 @@ function focusEditor(position) {
 }
 
 function removeDoc(id, title) {
-  if (!window.confirm(`「${title}」を削除しますか？\nこの操作は取り消せません。`)) return
+  const fileNote = folder.connected ? '\nフォルダの .md ファイルも削除されます。' : ''
+  if (!window.confirm(`「${title}」を削除しますか？${fileNote}\nこの操作は取り消せません。`)) return
   if (id === state.currentId) {
     clearTimeout(saveTimer)
     saveTimer = null
   }
   const wasCurrent = id === state.currentId
   state = deleteDoc(state, id)
+  folder.removeDoc(id)
   if (!state.currentId) state = createDoc(state, { id: newId(), now: Date.now() })
   persist()
   if (wasCurrent || Object.keys(state.docs).length === 1) loadIntoEditor()
@@ -395,6 +402,11 @@ const menuActions = {
     toast('全ドキュメントのバックアップを書き出しました')
   },
   'import-backup': () => els.importInput.click(),
+  'folder-choose': () => folder.choose().catch(folderError),
+  'folder-disconnect': () => {
+    folder.disconnect()
+    toast('フォルダとの接続を解除しました（フォルダ内のファイルはそのまま残ります）')
+  },
 }
 
 els.menu.addEventListener('click', (e) => {
@@ -418,6 +430,7 @@ els.importInput.addEventListener('change', async () => {
     persist()
     loadIntoEditor()
     renderDocList()
+    folder.resync()
     toast(`復元しました: 追加 ${result.added} 件 / 更新 ${result.updated} 件 / 変更なし ${result.skipped} 件`, 6000)
   } catch (err) {
     toast(`復元できませんでした: ${err.message}`, 6000)
@@ -448,7 +461,72 @@ function toast(message, ms = 2500) {
   }, ms)
 }
 
+// ---------- フォルダ保存 ----------
+const FOLDER_LABELS = {
+  syncing: (name) => `📁 ${name} と同期中…`,
+  connected: (name) => `📁 ${name}`,
+  reconnect: () => '📁 フォルダに再接続',
+  error: () => '📁 フォルダに保存できません',
+}
+
+function folderError(err) {
+  console.error(err)
+  toast(`フォルダに保存できませんでした: ${err?.message ?? err}`, 8000)
+}
+
+function renderFolderStatus({ status, folderName }) {
+  const label = FOLDER_LABELS[status]
+  els.folderStatus.hidden = !label
+  if (label) els.folderStatus.textContent = label(folderName)
+  els.folderStatus.dataset.status = status
+  els.folderStatus.title =
+    status === 'connected'
+      ? `「${folderName}」フォルダに .md ファイルとして保存しています`
+      : status === 'reconnect'
+        ? 'ブラウザを開き直したため、フォルダへのアクセス許可が必要です'
+        : status === 'error'
+          ? 'クリックすると再接続します'
+          : ''
+  const supported = status !== 'unsupported'
+  els.folderChoose.disabled = !supported
+  els.folderChoose.textContent = !supported
+    ? 'フォルダに保存（Chrome / Edge のみ）'
+    : status === 'none'
+      ? 'PC のフォルダにも保存する…'
+      : '保存先フォルダを変更…'
+  els.folderDisconnect.hidden = status === 'none' || status === 'unsupported'
+}
+
+const folder = createFolderController({
+  getDocs: () => state.docs,
+  newId,
+  applyUpserts(docs) {
+    if (docs.length === 0) return
+    flushSave()
+    const before = currentDoc()?.content
+    state = { ...state, docs: { ...state.docs, ...Object.fromEntries(docs.map((d) => [d.id, d])) } }
+    persist()
+    if (currentDoc()?.content !== before) loadIntoEditor()
+    renderDocList()
+  },
+  onStatus: renderFolderStatus,
+  onError: folderError,
+  onSynced(plan) {
+    const parts = []
+    if (plan.upserts.length) parts.push(`フォルダから ${plan.upserts.length} 件取り込み`)
+    if (plan.writes.length) parts.push(`${plan.writes.length} 件書き出し`)
+    if (parts.length) toast(`フォルダと同期しました（${parts.join('、')}）`, 4000)
+  },
+})
+
+els.folderStatus.addEventListener('click', () => {
+  const status = els.folderStatus.dataset.status
+  if (status === 'reconnect' || status === 'error') folder.reconnect().catch(folderError)
+  else if (status === 'connected') toast(els.folderStatus.title, 4000)
+})
+
 // ---------- 初期描画 ----------
 renderDocList()
 renderToc()
 setSaveStatus('保存済み')
+folder.init().catch(folderError)

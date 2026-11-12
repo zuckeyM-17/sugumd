@@ -29,6 +29,7 @@
         <summary class="btn btn-ghost icon-btn" aria-label="その他の操作">…</summary>
         <div class="menu-list" role="menu">
           <button type="button" role="menuitem" data-action="copy-markdown">Markdown テキストだけコピー</button>
+          <button type="button" role="menuitem" data-action="copy-slack">Slack 向けにコピー</button>
           <button type="button" role="menuitem" data-action="download-md">このドキュメントを .md で保存</button>
           <hr />
           <button type="button" role="menuitem" data-action="export-backup">全ドキュメントのバックアップを書き出す</button>
@@ -52,11 +53,13 @@
       <aside class="sidebar" aria-label="ドキュメント一覧">
         <button id="new-doc" class="btn btn-new" type="button">＋ 新しいドキュメント</button>
         <input id="doc-search" class="doc-search" type="search" placeholder="検索（Ctrl+K）" aria-label="ドキュメントを検索" />
+        <button id="open-todos" class="btn btn-new todo-open" type="button" aria-pressed="false">☑ ToDo 一覧</button>
         <ul id="doc-list" class="doc-list"></ul>
       </aside>
 
       <main id="editor-scroll" class="editor-scroll">
         <div id="editor" class="editor"></div>
+        <section id="todo-view" class="todo-view" hidden aria-label="ToDo 一覧"></section>
         <textarea id="raw" class="raw" hidden spellcheck="false" aria-label="Markdown ソース"></textarea>
       </main>
 

@@ -1157,3 +1157,94 @@ button {
   color: var(--accent);
   background: var(--bg);
 }
+
+/* ---------- ToDo 一覧 ---------- */
+.todo-open[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.todo-view {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.todo-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.todo-header h1 {
+  font-size: 1.9em;
+  margin: 0;
+  flex: 1;
+}
+.todo-show-done {
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.todo-group {
+  margin-bottom: 20px;
+}
+.todo-doc {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font-weight: 700;
+  font-size: 1.05em;
+  cursor: pointer;
+  text-align: left;
+}
+.todo-doc:hover {
+  color: var(--accent);
+}
+.todo-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.todo-item input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.todo-text {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  line-height: 1.6;
+  cursor: pointer;
+}
+.todo-text:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.todo-item.is-done .todo-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.todo-empty {
+  color: var(--text-muted);
+}
+.prose li.is-flash {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  transition: background 0.3s;
+}

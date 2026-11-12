@@ -9,6 +9,8 @@ import { renderSnippet } from './ui/snippet.js'
 import { isQuickSwitcherOpen, openQuickSwitcher } from './ui/quick-switcher.js'
 import { setupFindPanel } from './ui/find-panel.js'
 import { setupTheme } from './theme.js'
+import { collectTodos, countOpenTodos, extractTodos, setTodoChecked } from './todos.js'
+import { toSlackMrkdwn } from './slack.js'
 import {
   STORAGE_KEY,
   createDoc,
@@ -29,6 +31,8 @@ const $ = (sel) => document.querySelector(sel)
 const els = {
   docList: $('#doc-list'),
   docSearch: $('#doc-search'),
+  todoButton: $('#open-todos'),
+  todoView: $('#todo-view'),
   newDoc: $('#new-doc'),
   scroll: $('#editor-scroll'),
   editor: $('#editor'),
@@ -167,6 +171,7 @@ function renderDocList() {
     empty.textContent = '見つかりませんでした'
     els.docList.append(empty)
   }
+  updateTodoButton()
   for (const doc of docs) {
     const li = document.createElement('li')
     li.className = 'doc-item' + (doc.id === state.currentId ? ' is-active' : '')
@@ -200,6 +205,7 @@ function renderDocList() {
 }
 
 function switchDoc(id) {
+  if (todoViewOpen) closeTodoView()
   if (id === state.currentId) return
   flushSave()
   state = selectDoc(state, id)
@@ -222,6 +228,7 @@ function loadIntoEditor() {
 }
 
 function addDoc(content = '') {
+  if (todoViewOpen) closeTodoView()
   flushSave()
   state = createDoc(state, { id: newId(), now: Date.now(), content })
   persist()
@@ -277,6 +284,10 @@ function scheduleToc() {
 function renderToc() {
   headingCache = extractHeadings(editor.state.doc)
   els.toc.innerHTML = ''
+  if (todoViewOpen) {
+    els.toc.append(note('ToDo 一覧を表示中です'))
+    return
+  }
   if (rawMode) {
     els.toc.append(note('Markdown表示中は目次を使えません'))
     return
@@ -359,6 +370,7 @@ els.scroll.addEventListener('scroll', () => requestAnimationFrame(updateActiveTo
 
 // ---------- Markdown 表示切替 ----------
 function setRawMode(on) {
+  if (todoViewOpen) closeTodoView()
   flushSave()
   rawMode = on
   if (on) {
@@ -452,6 +464,14 @@ function timestamp() {
 
 const menuActions = {
   'copy-markdown': () => copyAll({ markdownOnly: true }),
+  'copy-slack': () => {
+    flushSave()
+    writeClipboard({
+      markdown: toSlackMrkdwn(currentMarkdown()),
+      html: null,
+      message: 'Slack 向けの書式でコピーしました',
+    })
+  },
   'download-md': () => {
     flushSave()
     const md = currentMarkdown()
@@ -540,11 +560,11 @@ document.addEventListener('keydown', (e) => {
   } else if (key === 'k' && !e.shiftKey && !e.altKey) {
     e.preventDefault()
     if (!isQuickSwitcherOpen()) showQuickSwitcher()
-  } else if (!rawMode && (key === 'f' || e.code === 'KeyF') && !e.shiftKey) {
+  } else if (!rawMode && !todoViewOpen && (key === 'f' || e.code === 'KeyF') && !e.shiftKey) {
     // Ctrl/Cmd+F で検索、Ctrl/Cmd+Option+F で置換（Mac は Cmd+H がアプリを隠すため）
     e.preventDefault()
     findPanel.open({ replace: e.altKey })
-  } else if (!rawMode && key === 'h' && e.ctrlKey && !e.metaKey) {
+  } else if (!rawMode && !todoViewOpen && key === 'h' && e.ctrlKey && !e.metaKey) {
     e.preventDefault()
     findPanel.open({ replace: true })
   }
@@ -560,6 +580,174 @@ function toast(message, ms = 2500) {
     els.toast.hidden = true
   }, ms)
 }
+
+// ---------- ToDo 一覧 ----------
+let todoViewOpen = false
+let todoIncludeDone = false
+// この一覧を開いている間にチェックしたものは、完了済みを隠していても消さずに残す（押した手応えのため）
+let todoJustChanged = new Set()
+
+function updateTodoButton() {
+  const n = countOpenTodos(state.docs)
+  els.todoButton.textContent = n ? `☑ ToDo 一覧（${n}）` : '☑ ToDo 一覧'
+}
+
+function openTodoView() {
+  flushSave()
+  if (findPanel.isOpen) findPanel.close()
+  tableControls.reset()
+  todoViewOpen = true
+  todoJustChanged = new Set()
+  els.editor.hidden = true
+  els.raw.hidden = true
+  els.todoView.hidden = false
+  els.todoButton.setAttribute('aria-pressed', 'true')
+  els.scroll.scrollTop = 0
+  renderTodoView()
+  renderToc()
+  document.body.classList.remove('sidebar-open')
+}
+
+function closeTodoView() {
+  todoViewOpen = false
+  els.todoView.hidden = true
+  els.editor.hidden = rawMode
+  els.raw.hidden = !rawMode
+  els.todoButton.setAttribute('aria-pressed', 'false')
+  renderToc()
+}
+
+function renderTodoView() {
+  const view = els.todoView
+  view.innerHTML = ''
+  const header = document.createElement('div')
+  header.className = 'todo-header'
+  const h = document.createElement('h1')
+  h.textContent = 'ToDo 一覧'
+  const showDone = document.createElement('label')
+  showDone.className = 'todo-show-done'
+  const showDoneInput = document.createElement('input')
+  showDoneInput.type = 'checkbox'
+  showDoneInput.checked = todoIncludeDone
+  showDoneInput.addEventListener('change', () => {
+    todoIncludeDone = showDoneInput.checked
+    renderTodoView()
+  })
+  showDone.append(showDoneInput, document.createTextNode(' 完了済みも表示'))
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.className = 'btn btn-ghost'
+  close.textContent = '閉じる'
+  close.addEventListener('click', () => {
+    closeTodoView()
+    focusEditor()
+  })
+  header.append(h, showDone, close)
+  view.append(header)
+
+  const groups = collectTodos(state.docs, { includeDone: true })
+    .map((g) => ({
+      ...g,
+      todos: g.todos.filter((t) => todoIncludeDone || !t.checked || todoJustChanged.has(`${g.id}:${t.line}`)),
+    }))
+    .filter((g) => g.todos.length > 0)
+
+  if (groups.length === 0) {
+    const empty = document.createElement('p')
+    empty.className = 'todo-empty'
+    empty.textContent = todoIncludeDone
+      ? 'ToDo はまだありません。本文で「[] 」と打つと ToDo になります。'
+      : '未完了の ToDo はありません 🎉'
+    view.append(empty)
+    return
+  }
+
+  for (const group of groups) {
+    const section = document.createElement('section')
+    section.className = 'todo-group'
+    const title = document.createElement('button')
+    title.type = 'button'
+    title.className = 'todo-doc'
+    title.textContent = group.title
+    title.addEventListener('click', () => jumpToTodo(group.id, null))
+    const list = document.createElement('ul')
+    list.className = 'todo-list'
+    for (const todo of group.todos) {
+      const li = document.createElement('li')
+      li.className = 'todo-item' + (todo.checked ? ' is-done' : '')
+      li.style.paddingLeft = `${todo.depth * 22}px`
+      const box = document.createElement('input')
+      box.type = 'checkbox'
+      box.checked = todo.checked
+      box.setAttribute('aria-label', todo.text)
+      box.addEventListener('change', () => toggleTodo(group.id, todo.line, box.checked))
+      const text = document.createElement('button')
+      text.type = 'button'
+      text.className = 'todo-text'
+      text.textContent = todo.text || '（空の ToDo）'
+      text.title = 'このドキュメントを開く'
+      text.addEventListener('click', () => jumpToTodo(group.id, todo.line))
+      li.append(box, text)
+      list.append(li)
+    }
+    section.append(title, list)
+    view.append(section)
+  }
+}
+
+function toggleTodo(id, line, checked) {
+  flushSave()
+  const doc = state.docs[id]
+  const next = doc && setTodoChecked(doc.content, line, checked)
+  if (!next) {
+    toast('ドキュメントが変わっていたため、一覧を更新しました')
+    renderTodoView()
+    return
+  }
+  state = updateDocContent(state, id, next, Date.now())
+  persist()
+  folder.saveDoc(state.docs[id])
+  if (id === state.currentId) {
+    editor.commands.setContent(next, { contentType: 'markdown', emitUpdate: false })
+    if (rawMode) els.raw.value = next
+  }
+  todoJustChanged.add(`${id}:${line}`)
+  renderDocList()
+  renderTodoView()
+}
+
+/** ドキュメントを開き、その ToDo の行へ移動する。 */
+function jumpToTodo(id, line) {
+  const index = line == null ? -1 : extractTodos(state.docs[id]?.content ?? '').findIndex((t) => t.line === line)
+  closeTodoView()
+  switchDoc(id)
+  if (rawMode) {
+    els.raw.focus()
+    return
+  }
+  // Markdown の n 番目の ToDo ＝ 文書中の n 番目の taskItem
+  let target = null
+  let n = 0
+  editor.state.doc.descendants((node, pos) => {
+    if (target != null) return false
+    if (node.type.name === 'taskItem') {
+      if (n === index) target = pos
+      n++
+    }
+    return true
+  })
+  if (target == null) return focusEditor('start')
+  editor.chain().setTextSelection(target + 2).run()
+  editor.view.focus()
+  const dom = editor.view.nodeDOM(target)
+  if (dom instanceof HTMLElement) {
+    dom.scrollIntoView({ block: 'center' })
+    dom.classList.add('is-flash')
+    setTimeout(() => dom.classList.remove('is-flash'), 1200)
+  }
+}
+
+els.todoButton.addEventListener('click', () => (todoViewOpen ? closeTodoView() : openTodoView()))
 
 // ---------- フォルダ保存 ----------
 const FOLDER_LABELS = {

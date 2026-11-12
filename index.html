@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>sugumd</title>
     <meta name="description" content="すぐ書けて、すぐ整って、すぐコピーできる。ブラウザだけで動く Markdown エディター" />
+    <script>
+      // 描画前にテーマを決めて、ダーク設定の人に一瞬明るい画面が見えないようにする（src/theme.js と同じ判定）
+      ;(function () {
+        var pref = null
+        try { pref = localStorage.getItem('sugumd:theme') } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      })()
+    </script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232f6feb'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'>M↓</text></svg>" />
   </head>
   <body>
@@ -27,6 +36,13 @@
           <hr />
           <button type="button" role="menuitem" data-action="folder-choose">PC のフォルダにも保存する…</button>
           <button type="button" role="menuitem" data-action="folder-disconnect" hidden>フォルダとの接続を解除</button>
+          <hr />
+          <div class="menu-label" id="theme-label">表示テーマ</div>
+          <div role="group" aria-labelledby="theme-label">
+            <button type="button" role="menuitemradio" data-action="theme-system" aria-checked="true">システムに合わせる</button>
+            <button type="button" role="menuitemradio" data-action="theme-light" aria-checked="false">ライト</button>
+            <button type="button" role="menuitemradio" data-action="theme-dark" aria-checked="false">ダーク</button>
+          </div>
         </div>
       </details>
       <input id="import-input" type="file" accept="application/json,.json" hidden />
@@ -35,6 +51,7 @@
     <div class="layout">
       <aside class="sidebar" aria-label="ドキュメント一覧">
         <button id="new-doc" class="btn btn-new" type="button">＋ 新しいドキュメント</button>
+        <input id="doc-search" class="doc-search" type="search" placeholder="検索（Ctrl+K）" aria-label="ドキュメントを検索" />
         <ul id="doc-list" class="doc-list"></ul>
       </aside>
 

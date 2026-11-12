@@ -44,3 +44,22 @@ export function looksLikeMarkdown(text) {
   ]
   return patterns.some((p) => p.test(text))
 }
+
+/**
+ * 見出しから始まる「節」の範囲。次に同じかより上位の見出しが現れる直前までを含む。
+ * 見出しが文書の直下にない（引用の中など）場合は、その見出しだけを返す。
+ */
+export function sectionRange(doc, headingPos) {
+  let level = null
+  let end = doc.content.size
+  doc.forEach((node, offset) => {
+    if (level == null) {
+      if (offset === headingPos && node.type.name === 'heading') level = node.attrs.level
+      return
+    }
+    if (end === doc.content.size && node.type.name === 'heading' && node.attrs.level <= level) end = offset
+  })
+  if (level != null) return { from: headingPos, to: end }
+  const node = doc.nodeAt(headingPos)
+  return node ? { from: headingPos, to: headingPos + node.nodeSize } : null
+}

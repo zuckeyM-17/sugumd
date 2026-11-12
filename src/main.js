@@ -1,9 +1,14 @@
 import './style.css'
-import { createEditor } from './editor.js'
+import { createEditor, serializeRange } from './editor.js'
 import { SlashCommand } from './slash-command.js'
 import { setupTableControls } from './table-controls.js'
 import { closeTablePicker } from './table-picker.js'
-import { extractHeadings } from './markdown-utils.js'
+import { extractHeadings, sectionRange } from './markdown-utils.js'
+import { searchDocs } from './search.js'
+import { renderSnippet } from './ui/snippet.js'
+import { isQuickSwitcherOpen, openQuickSwitcher } from './ui/quick-switcher.js'
+import { setupFindPanel } from './ui/find-panel.js'
+import { setupTheme } from './theme.js'
 import {
   STORAGE_KEY,
   createDoc,
@@ -23,6 +28,7 @@ import { createFolderController } from './folder-controller.js'
 const $ = (sel) => document.querySelector(sel)
 const els = {
   docList: $('#doc-list'),
+  docSearch: $('#doc-search'),
   newDoc: $('#new-doc'),
   scroll: $('#editor-scroll'),
   editor: $('#editor'),
@@ -41,6 +47,16 @@ const els = {
 }
 
 const storage = window.localStorage
+
+// ---------- テーマ ----------
+const theme = setupTheme({
+  storage,
+  onChange: ({ preference }) => {
+    document.querySelectorAll('[data-action^="theme-"]').forEach((btn) => {
+      btn.setAttribute('aria-checked', String(btn.dataset.action === `theme-${preference}`))
+    })
+  },
+})
 const newId = () => crypto.randomUUID()
 
 // ---------- 状態 ----------
@@ -74,6 +90,7 @@ const editor = createEditor({
   },
 })
 const tableControls = setupTableControls(editor, els.scroll)
+const findPanel = setupFindPanel(editor, document.body)
 
 function currentMarkdown() {
   return rawMode ? els.raw.value : editor.getMarkdown()
@@ -142,7 +159,15 @@ window.addEventListener('storage', (e) => {
 // ---------- ドキュメント一覧 ----------
 function renderDocList() {
   els.docList.innerHTML = ''
-  for (const doc of listDocs(state)) {
+  const query = els.docSearch.value.trim()
+  const docs = query ? searchDocs(state.docs, query) : listDocs(state)
+  if (query && docs.length === 0) {
+    const empty = document.createElement('li')
+    empty.className = 'doc-empty'
+    empty.textContent = '見つかりませんでした'
+    els.docList.append(empty)
+  }
+  for (const doc of docs) {
     const li = document.createElement('li')
     li.className = 'doc-item' + (doc.id === state.currentId ? ' is-active' : '')
 
@@ -156,7 +181,9 @@ function renderDocList() {
     const time = document.createElement('span')
     time.className = 'doc-time'
     time.textContent = formatTime(doc.updatedAt)
-    open.append(title, time)
+    open.append(title)
+    if (doc.snippet) open.append(renderSnippet(doc.snippet, 'doc-snippet'))
+    open.append(time)
     if (doc.id === state.currentId) open.setAttribute('aria-current', 'page')
 
     const del = document.createElement('button')
@@ -194,15 +221,16 @@ function loadIntoEditor() {
   setSaveStatus('保存済み')
 }
 
-function addDoc() {
+function addDoc(content = '') {
   flushSave()
-  state = createDoc(state, { id: newId(), now: Date.now() })
+  state = createDoc(state, { id: newId(), now: Date.now(), content })
   persist()
   loadIntoEditor()
   renderDocList()
   document.body.classList.remove('sidebar-open')
   if (rawMode) els.raw.focus()
-  else focusEditor('start')
+  else focusEditor(content ? 'end' : 'start')
+  if (content) scheduleSave()
 }
 
 // Tiptap の focus() は次フレームまで遅れるため、その間のキー入力が押したボタン側に入ってしまう
@@ -259,17 +287,33 @@ function renderToc() {
   }
   const minLevel = Math.min(...headingCache.map((h) => h.level))
   headingCache.forEach((h, i) => {
+    const row = document.createElement('div')
+    row.className = 'toc-row'
     const a = document.createElement('a')
     a.href = '#'
     a.className = 'toc-item'
     a.style.paddingLeft = `${(h.level - minLevel) * 14 + 8}px`
     a.textContent = h.text
+    a.title = h.text
     a.dataset.index = String(i)
     a.addEventListener('click', (e) => {
       e.preventDefault()
       jumpToHeading(i)
     })
-    els.toc.append(a)
+    // 右クリックでもその節をコピーできる
+    a.addEventListener('contextmenu', (e) => {
+      e.preventDefault()
+      copySection(i)
+    })
+    const copy = document.createElement('button')
+    copy.type = 'button'
+    copy.className = 'toc-copy'
+    copy.textContent = 'コピー'
+    copy.title = 'この見出しの節（次の同じレベルの見出しまで）をコピー'
+    copy.setAttribute('aria-label', `「${h.text}」の節をコピー`)
+    copy.addEventListener('click', () => copySection(i))
+    row.append(a, copy)
+    els.toc.append(row)
   })
   updateActiveToc()
 }
@@ -327,6 +371,7 @@ function setRawMode(on) {
   els.toggleRaw.textContent = on ? '編集表示に戻る' : 'Markdown表示'
   els.toggleRaw.setAttribute('aria-pressed', String(on))
   tableControls.reset()
+  if (on && findPanel.isOpen) findPanel.close()
   renderToc()
   if (on) els.raw.focus()
   else focusEditor()
@@ -340,19 +385,35 @@ async function copyAll({ markdownOnly = false } = {}) {
   flushSave()
   const markdown = currentMarkdown()
   if (rawMode) editor.commands.setContent(markdown, { contentType: 'markdown', emitUpdate: false })
+  await writeClipboard({
+    markdown,
+    html: markdownOnly ? null : editor.getHTML(),
+    message: markdownOnly ? 'Markdown テキストをコピーしました' : '全体をコピーしました（Notion にそのまま貼れます）',
+  })
+}
+
+function copySection(index) {
+  const heading = headingCache[index]
+  const range = heading && sectionRange(editor.state.doc, heading.pos)
+  if (!range) return
+  const { markdown, html } = serializeRange(editor, range.from, range.to)
+  writeClipboard({ markdown, html, message: `「${heading.text}」の節をコピーしました` })
+}
+
+/** Markdown（text/plain）と HTML（text/html）を一緒に載せる。HTML があると Notion などで見出しや表が再現される。 */
+async function writeClipboard({ markdown, html, message }) {
   try {
-    if (!markdownOnly && window.ClipboardItem && navigator.clipboard?.write) {
-      // text/html も載せると Notion などに貼ったとき表や見出しがそのまま再現される
+    if (html && window.ClipboardItem && navigator.clipboard?.write) {
       await navigator.clipboard.write([
         new ClipboardItem({
           'text/plain': new Blob([markdown], { type: 'text/plain' }),
-          'text/html': new Blob([editor.getHTML()], { type: 'text/html' }),
+          'text/html': new Blob([html], { type: 'text/html' }),
         }),
       ])
     } else {
       await navigator.clipboard.writeText(markdown)
     }
-    toast(markdownOnly ? 'Markdown テキストをコピーしました' : '全体をコピーしました（Notion にそのまま貼れます）')
+    toast(message)
   } catch {
     legacyCopy(markdown)
   }
@@ -402,6 +463,9 @@ const menuActions = {
     toast('全ドキュメントのバックアップを書き出しました')
   },
   'import-backup': () => els.importInput.click(),
+  'theme-system': () => theme.setPreference('system'),
+  'theme-light': () => theme.setPreference('light'),
+  'theme-dark': () => theme.setPreference('dark'),
   'folder-choose': () => folder.choose().catch(folderError),
   'folder-disconnect': () => {
     folder.disconnect()
@@ -438,15 +502,51 @@ els.importInput.addEventListener('change', async () => {
 })
 
 els.copyAll.addEventListener('click', () => copyAll())
-els.newDoc.addEventListener('click', addDoc)
+els.newDoc.addEventListener('click', () => addDoc())
+els.docSearch.addEventListener('input', renderDocList)
+els.docSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    els.docSearch.value = ''
+    renderDocList()
+  } else if (e.key === 'Enter' && !e.isComposing) {
+    // 検索結果の先頭を開く
+    els.docList.querySelector('.doc-open')?.click()
+  }
+})
+
+function showQuickSwitcher() {
+  flushSave()
+  openQuickSwitcher({
+    search: (query) => searchDocs(state.docs, query),
+    onPick: (id) => {
+      switchDoc(id)
+      // Tiptap の focus() は次フレームに遅れて走り、直後に開いたダイアログの入力を奪うので、同期の focus だけ使う
+      if (rawMode) els.raw.focus()
+      else editor.view.focus()
+    },
+    onCreate: (title) => addDoc(`# ${title}\n\n`),
+  })
+}
 els.toggleSidebar.addEventListener('click', () => document.body.classList.toggle('sidebar-open'))
 
 document.addEventListener('keydown', (e) => {
   const mod = e.metaKey || e.ctrlKey
-  if (mod && e.key.toLowerCase() === 's') {
+  if (!mod || e.isComposing) return
+  const key = e.key.toLowerCase()
+  if (key === 's') {
     e.preventDefault()
     flushSave()
     toast('保存しました')
+  } else if (key === 'k' && !e.shiftKey && !e.altKey) {
+    e.preventDefault()
+    if (!isQuickSwitcherOpen()) showQuickSwitcher()
+  } else if (!rawMode && (key === 'f' || e.code === 'KeyF') && !e.shiftKey) {
+    // Ctrl/Cmd+F で検索、Ctrl/Cmd+Option+F で置換（Mac は Cmd+H がアプリを隠すため）
+    e.preventDefault()
+    findPanel.open({ replace: e.altKey })
+  } else if (!rawMode && key === 'h' && e.ctrlKey && !e.metaKey) {
+    e.preventDefault()
+    findPanel.open({ replace: true })
   }
 })
 

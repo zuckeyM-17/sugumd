@@ -4,6 +4,7 @@ import Suggestion from '@tiptap/suggestion'
 import { PluginKey } from '@tiptap/pm/state'
 import { parseTableSize } from './markdown-utils.js'
 import { openTablePicker } from './table-picker.js'
+import { CALLOUT_TYPES } from './extensions/callout.js'
 
 export const COMMANDS = [
   { id: 'h1', label: '見出し1', hint: '#', keywords: ['h1', 'heading', 'midashi'], run: (c) => c.setNode('heading', { level: 1 }) },
@@ -16,6 +17,25 @@ export const COMMANDS = [
   { id: 'quote', label: '引用', hint: '>', keywords: ['quote', 'blockquote', 'inyou'], run: (c) => c.toggleBlockquote() },
   { id: 'code', label: 'コードブロック', hint: '```', keywords: ['code', 'pre'], run: (c) => c.toggleCodeBlock() },
   { id: 'hr', label: '区切り線', hint: '---', keywords: ['hr', 'divider', 'line'], run: (c) => c.setHorizontalRule() },
+  { id: 'toggle', label: 'トグル', hint: '<details>', keywords: ['toggle', 'details', 'fold', '折りたたみ', 'toguru'], run: (c) => c.setDetails() },
+  ...Object.entries(CALLOUT_TYPES).map(([type, label]) => ({
+    id: `callout-${type.toLowerCase()}`,
+    label: `コールアウト（${label}）`,
+    hint: `> [!${type}]`,
+    keywords: ['callout', 'alert', 'note', type.toLowerCase(), label, 'コールアウト'],
+    // GitHub と同じく、印は 1 行目に単独で置く（印の段落と本文の段落に分ける）
+    run: (c) => c.toggleBlockquote().insertContent(`[!${type}]`).splitBlock(),
+  })),
+  {
+    id: 'mermaid',
+    label: 'Mermaid 図',
+    hint: '```mermaid',
+    keywords: ['mermaid', 'diagram', 'chart', 'flow', '図', 'フロー'],
+    run: (c) => c.setCodeBlock({ language: 'mermaid' }).command(({ tr }) => {
+      tr.insertText('flowchart LR\n  A[開始] --> B[処理] --> C[終了]')
+      return true
+    }),
+  },
 ]
 
 /**

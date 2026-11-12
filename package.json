@@ -9,13 +9,17 @@
   },
   "dependencies": {
     "@tiptap/core": "^3.33.1",
+    "@tiptap/extension-code-block-lowlight": "^3.33.1",
+    "@tiptap/extension-details": "^3.33.1",
     "@tiptap/extension-list": "^3.33.1",
     "@tiptap/extension-table": "^3.33.1",
     "@tiptap/extensions": "^3.33.1",
     "@tiptap/markdown": "^3.33.1",
     "@tiptap/pm": "^3.33.1",
     "@tiptap/starter-kit": "^3.33.1",
-    "@tiptap/suggestion": "^3.33.1"
+    "@tiptap/suggestion": "^3.33.1",
+    "lowlight": "^3.3.0",
+    "mermaid": "^12.3.0"
   },
   "devDependencies": {
     "jsdom": "^31.0.0",

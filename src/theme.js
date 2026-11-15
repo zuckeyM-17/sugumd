@@ -45,6 +45,9 @@ export function setupTheme({ storage = window.localStorage, onChange } = {}) {
     const theme = resolveTheme(preference, Boolean(media?.matches))
     const changed = document.documentElement.dataset.theme !== theme
     document.documentElement.dataset.theme = theme
+    // ブラウザやホーム画面アプリの上部の色も合わせる
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.content = theme === 'dark' ? '#191919' : '#ffffff'
     if (changed) window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: { theme } }))
     onChange?.({ preference, theme })
   }

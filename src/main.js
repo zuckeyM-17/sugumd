@@ -26,6 +26,7 @@ import {
 } from './store.js'
 import { WELCOME_MARKDOWN } from './welcome.js'
 import { createFolderController } from './folder-controller.js'
+import { ensureFocus } from './focus.js'
 
 const $ = (sel) => document.querySelector(sel)
 const els = {
@@ -42,6 +43,8 @@ const els = {
   copyAll: $('#copy-all'),
   modeToggle: $('#mode-toggle'),
   toggleSidebar: $('#toggle-sidebar'),
+  toggleToc: $('#toggle-toc'),
+  drawerBackdrop: $('#drawer-backdrop'),
   menu: $('#more-menu'),
   importInput: $('#import-input'),
   toast: $('#toast'),
@@ -212,7 +215,7 @@ function switchDoc(id) {
   persist()
   loadIntoEditor()
   renderDocList()
-  document.body.classList.remove('sidebar-open')
+  closeDrawers()
 }
 
 function loadIntoEditor() {
@@ -234,7 +237,7 @@ function addDoc(content = '') {
   persist()
   loadIntoEditor()
   renderDocList()
-  document.body.classList.remove('sidebar-open')
+  closeDrawers()
   if (rawMode) els.raw.focus()
   else focusEditor(content ? 'end' : 'start')
   if (content) scheduleSave()
@@ -243,8 +246,7 @@ function addDoc(content = '') {
 // Tiptap の focus() は次フレームまで遅れるため、その間のキー入力が押したボタン側に入ってしまう
 // （スペースで「新しいドキュメント」がもう一度押される等）。同期的にもフォーカスを移す。
 function focusEditor(position) {
-  editor.commands.focus(position)
-  editor.view.focus()
+  ensureFocus(editor, position)
 }
 
 function removeDoc(id, title) {
@@ -309,6 +311,7 @@ function renderToc() {
     a.dataset.index = String(i)
     a.addEventListener('click', (e) => {
       e.preventDefault()
+      closeDrawers()
       jumpToHeading(i)
     })
     // 右クリックでもその節をコピーできる
@@ -340,7 +343,8 @@ function jumpToHeading(index) {
   const heading = headingCache[index]
   if (!heading) return
   const dom = editor.view.nodeDOM(heading.pos)
-  editor.chain().setTextSelection(heading.pos + 1).focus(undefined, { scrollIntoView: false }).run()
+  editor.commands.setTextSelection(heading.pos + 1)
+  ensureFocus(editor)
   if (dom instanceof HTMLElement) dom.scrollIntoView({ behavior: 'smooth', block: 'start' })
   // 文書末尾付近の見出しは先頭までスクロールできないので、クリックしたものを明示的に選択状態にする
   pinnedTocIndex = index
@@ -566,7 +570,30 @@ function showQuickSwitcher() {
     onCreate: (title) => addDoc(`# ${title}\n\n`),
   })
 }
-els.toggleSidebar.addEventListener('click', () => document.body.classList.toggle('sidebar-open'))
+// 狭い画面では、ドキュメント一覧（左）と目次（右）を引き出し式にする
+function openDrawer(name) {
+  const open = !document.body.classList.contains(`${name}-open`)
+  closeDrawers()
+  if (!open) return
+  document.body.classList.add(`${name}-open`)
+  els.drawerBackdrop.hidden = false
+  els.toggleSidebar.setAttribute('aria-expanded', String(name === 'sidebar'))
+  els.toggleToc.setAttribute('aria-expanded', String(name === 'toc'))
+}
+
+function closeDrawers() {
+  document.body.classList.remove('sidebar-open', 'toc-open')
+  els.drawerBackdrop.hidden = true
+  els.toggleSidebar.setAttribute('aria-expanded', 'false')
+  els.toggleToc.setAttribute('aria-expanded', 'false')
+}
+
+els.toggleSidebar.addEventListener('click', () => openDrawer('sidebar'))
+els.toggleToc.addEventListener('click', () => openDrawer('toc'))
+els.drawerBackdrop.addEventListener('click', closeDrawers)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !els.drawerBackdrop.hidden) closeDrawers()
+})
 
 document.addEventListener('keydown', (e) => {
   const mod = e.metaKey || e.ctrlKey
@@ -627,7 +654,7 @@ function openTodoView() {
   els.scroll.scrollTop = 0
   renderTodoView()
   renderToc()
-  document.body.classList.remove('sidebar-open')
+  closeDrawers()
 }
 
 function closeTodoView() {
@@ -840,3 +867,10 @@ renderDocList()
 renderToc()
 setSaveStatus('Saved')
 folder.init().catch(folderError)
+
+// オフラインでも起動できるよう Service Worker を登録する（本番ビルドのみ。開発中は古いファイルが残って紛らわしいため）
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker registration failed', err))
+  })
+}

@@ -5,6 +5,7 @@ import { PluginKey } from '@tiptap/pm/state'
 import { parseTableSize } from './markdown-utils.js'
 import { openTablePicker } from './table-picker.js'
 import { CALLOUT_TYPES } from './extensions/callout.js'
+import { ensureFocus } from './focus.js'
 
 export const COMMANDS = [
   { id: 'h1', label: 'Heading 1', hint: '#', keywords: ['h1', 'heading', 'title', '見出し'], run: (c) => c.setNode('heading', { level: 1 }) },
@@ -57,27 +58,29 @@ export function filterCommands(query, { inTable = false } = {}) {
 }
 
 export function insertTable(editor, { rows, cols }) {
-  editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+  ensureFocus(editor)
+  editor.chain().insertTable({ rows, cols, withHeaderRow: true }).run()
 }
 
 function executeCommand(editor, range, item) {
+  ensureFocus(editor)
   if (item.size) {
-    editor.chain().focus().deleteRange(range).run()
+    editor.chain().deleteRange(range).run()
     insertTable(editor, item.size)
     return
   }
   if (item.id === 'table') {
-    editor.chain().focus().deleteRange(range).run()
+    editor.chain().deleteRange(range).run()
     const coords = editor.view.coordsAtPos(editor.state.selection.from)
     openTablePicker({
       x: coords.left,
       y: coords.bottom + 6,
       onPick: (size) => insertTable(editor, size),
-      onCancel: () => editor.commands.focus(),
+      onCancel: () => ensureFocus(editor),
     })
     return
   }
-  item.run(editor.chain().focus().deleteRange(range)).run()
+  item.run(editor.chain().deleteRange(range)).run()
 }
 
 function createMenuRenderer() {
@@ -88,13 +91,9 @@ function createMenuRenderer() {
 
   const draw = () => {
     el.innerHTML = ''
-    if (items.length === 0) {
-      const empty = document.createElement('div')
-      empty.className = 'slash-empty'
-      empty.textContent = 'No matching commands'
-      el.append(empty)
-      return
-    }
+    // 該当がなければメニューを出さない（既にある「/何か」という文字の中にカーソルを置いただけでも開くため）
+    el.hidden = items.length === 0
+    if (items.length === 0) return
     items.forEach((item, i) => {
       const btn = document.createElement('button')
       btn.type = 'button'
@@ -147,7 +146,8 @@ function createMenuRenderer() {
     },
     onKeyDown({ event }) {
       if (event.key === 'Escape') {
-        el?.remove()
+        if (!el || el.hidden) return false
+        el.remove()
         return true
       }
       if (items.length === 0) return false

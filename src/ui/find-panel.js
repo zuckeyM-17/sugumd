@@ -1,5 +1,6 @@
 // Ctrl/Cmd + F（検索）・Ctrl/Cmd + H（置換）で開く、エディター右上の検索パネル。
 import { findKey, revealCurrentMatch } from '../extensions/find-replace.js'
+import { ensureFocus } from '../focus.js'
 
 export function setupFindPanel(editor, container) {
   const panel = document.createElement('div')
@@ -67,7 +68,7 @@ export function setupFindPanel(editor, container) {
   function close() {
     panel.hidden = true
     editor.commands.clearFind()
-    editor.commands.focus()
+    ensureFocus(editor)
   }
 
   findInput.addEventListener('input', search)

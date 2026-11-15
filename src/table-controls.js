@@ -1,6 +1,7 @@
 // 表の操作 UI。
 // - 表にマウスを乗せると、下端と右端に「+」バーが出て、行・列を末尾に足せる
 // - カーソルが表の中にあると、表の上に行/列の追加・削除ツールバーが出る
+import { ensureFocus } from './focus.js'
 
 /** 表ノードの、最終行の先頭セルと 1 行目の最終セルの位置を返す。 */
 export function findEdgeCells(tableNode, tablePos) {
@@ -31,13 +32,15 @@ const insideCell = (cellPos) => cellPos + 2
 export function appendRow(editor, tablePos) {
   const table = editor.state.doc.nodeAt(tablePos)
   const { lastRowCellPos } = findEdgeCells(table, tablePos)
-  editor.chain().focus().setTextSelection(insideCell(lastRowCellPos)).addRowAfter().run()
+  ensureFocus(editor)
+  editor.chain().setTextSelection(insideCell(lastRowCellPos)).addRowAfter().run()
 }
 
 export function appendColumn(editor, tablePos) {
   const table = editor.state.doc.nodeAt(tablePos)
   const { lastColCellPos } = findEdgeCells(table, tablePos)
-  editor.chain().focus().setTextSelection(insideCell(lastColCellPos)).addColumnAfter().run()
+  ensureFocus(editor)
+  editor.chain().setTextSelection(insideCell(lastColCellPos)).addColumnAfter().run()
 }
 
 const TOOLBAR_ACTIONS = [
@@ -77,7 +80,8 @@ export function setupTableControls(editor, container) {
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault()
       setMenuOpen(false)
-      action.run(editor.chain().focus()).run()
+      ensureFocus(editor)
+      action.run(editor.chain()).run()
     })
     menu.append(btn)
   }
@@ -135,9 +139,15 @@ export function setupTableControls(editor, container) {
     addColBtn.hidden = true
   }
 
+  // マウスが表から離れたら隠す。ただしカーソルが表の中にある間は残す
+  // （タッチ端末ではタップのたびにマウス相当のイベントが飛び、「離れた」と判定されてしまうため）
   function scheduleHide() {
     clearTimeout(hideTimer)
-    hideTimer = setTimeout(hideEdgeButtons, 250)
+    hideTimer = setTimeout(() => {
+      const found = editor.isFocused ? findTableAt(editor.state.doc, editor.state.selection.from) : null
+      if (found) showEdgeButtons(found.pos)
+      else hideEdgeButtons()
+    }, 250)
   }
 
   editor.view.dom.addEventListener('mousemove', (e) => {
@@ -179,7 +189,8 @@ export function setupTableControls(editor, container) {
     const rect = relativeRect(table)
     toolbar.style.top = `${Math.max(0, rect.top - trigger.offsetHeight - 4)}px`
     toolbar.style.left = `${rect.left + rect.width - trigger.offsetWidth}px`
-    if (hoveredTablePos === found.pos) showEdgeButtons(found.pos)
+    // タッチ端末にはマウスを乗せる操作がないので、カーソルが表の中にあれば「+」を出す
+    showEdgeButtons(found.pos)
   }
 
   editor.on('selectionUpdate', updateToolbar)
@@ -188,6 +199,7 @@ export function setupTableControls(editor, container) {
   editor.on('blur', () => {
     toolbar.hidden = true
     setMenuOpen(false)
+    scheduleHide() // マウスが表の上にあれば mousemove で出し直される
   })
 
   return {

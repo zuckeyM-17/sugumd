@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>sugumd</title>
     <meta name="description" content="Write fast, see it formatted, copy it anywhere. A Markdown editor that runs entirely in your browser." />
+    <!-- ホーム画面に追加したときにアプリとして開くための設定 -->
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="sugumd" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <script>
       // 描画前にテーマを決めて、ダーク設定の人に一瞬明るい画面が見えないようにする（src/theme.js と同じ判定）
       ;(function () {
@@ -12,9 +20,11 @@
         try { pref = localStorage.getItem('sugumd:theme') } catch (e) {}
         var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)
         document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.content = dark ? '#191919' : '#ffffff'
       })()
     </script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232f6feb'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'>M↓</text></svg>" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
   </head>
   <body>
     <header class="topbar">
@@ -27,7 +37,8 @@
         <button type="button" role="radio" data-mode="rich" aria-checked="true" title="Formatted editing">Rich</button>
         <button type="button" role="radio" data-mode="markdown" aria-checked="false" tabindex="-1" title="Edit raw Markdown (Ctrl+Shift+M)">Markdown</button>
       </div>
-      <button id="copy-all" class="btn btn-primary" type="button">Copy all</button>
+      <button id="copy-all" class="btn btn-primary" type="button"><span class="label-long">Copy all</span><span class="label-short">Copy</span></button>
+      <button id="toggle-toc" class="btn btn-ghost icon-btn only-narrow-toc" type="button" aria-label="Open outline" aria-expanded="false" title="Outline">☷</button>
       <details id="more-menu" class="menu">
         <summary class="btn btn-ghost icon-btn" aria-label="More actions">…</summary>
         <div class="menu-list" role="menu">
@@ -72,6 +83,7 @@
       </aside>
     </div>
 
+    <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script type="module" src="/src/main.js"></script>
   </body>

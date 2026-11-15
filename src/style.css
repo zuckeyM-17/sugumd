@@ -503,6 +503,8 @@ button {
 .prose .tableWrapper {
   overflow-x: auto;
   margin: 0.8em 0;
+  /* 表の下に出る「+」バーが、次の段落に重ならないだけの余白 */
+  margin-bottom: 24px;
 }
 .prose table {
   border-collapse: collapse;
@@ -641,11 +643,6 @@ button {
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.slash-empty {
-  padding: 8px 10px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
 
 .table-picker {
   padding: 10px;
@@ -748,22 +745,85 @@ button {
 }
 
 /* ---------- 狭い画面 ---------- */
+.only-narrow,
+.only-narrow-toc,
+.label-short,
+.drawer-backdrop {
+  display: none;
+}
+
+/* iPhone のホームバーや横向き時のノッチに中身が隠れないようにする */
+.topbar {
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+.sidebar {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  padding-left: max(8px, env(safe-area-inset-left));
+}
+.toc-pane {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  padding-right: max(10px, env(safe-area-inset-right));
+}
+.toast {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+/* ---------- 目次を引き出し式にする幅 ---------- */
 @media (max-width: 1100px) {
   .layout {
     grid-template-columns: 220px minmax(0, 1fr);
   }
+  .only-narrow-toc {
+    display: inline-block;
+  }
   .toc-pane {
-    display: none;
+    position: fixed;
+    top: var(--topbar-h);
+    bottom: 0;
+    right: 0;
+    width: min(300px, 85vw);
+    z-index: 40;
+    background: var(--bg);
+    transform: translateX(100%);
+    transition: transform 0.2s;
+    box-shadow: var(--shadow);
+    visibility: hidden;
+  }
+  .toc-open .toc-pane {
+    transform: none;
+    visibility: visible;
+  }
+  .drawer-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-h) 0 0 0;
+    z-index: 39;
+    background: rgba(15, 15, 15, 0.2);
   }
 }
 
+/* ---------- スマホ幅 ---------- */
 @media (max-width: 760px) {
   .only-narrow {
     display: inline-block;
   }
   .brand,
-  .mode-toggle {
+  .save-status,
+  .label-long {
     display: none;
+  }
+  .label-short {
+    display: inline;
+  }
+  .topbar {
+    gap: 4px;
+  }
+  .topbar .btn {
+    padding: 6px 9px;
+  }
+  .mode-toggle button {
+    padding: 4px 9px;
   }
   .layout {
     grid-template-columns: minmax(0, 1fr);
@@ -773,17 +833,78 @@ button {
     top: var(--topbar-h);
     bottom: 0;
     left: 0;
-    width: min(280px, 85vw);
+    width: min(300px, 85vw);
     z-index: 40;
     transform: translateX(-100%);
     transition: transform 0.2s;
     box-shadow: var(--shadow);
+    visibility: hidden;
   }
   .sidebar-open .sidebar {
     transform: none;
+    visibility: visible;
   }
   .editor-scroll {
-    padding: 24px 16px 40vh;
+    padding: 24px max(16px, env(safe-area-inset-right)) 40vh max(16px, env(safe-area-inset-left));
+  }
+  .find-panel {
+    left: 8px;
+    right: 8px;
+  }
+  .find-input,
+  .replace-input {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+  .todo-header {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- タッチ端末（マウスを乗せる操作がない） ---------- */
+@media (hover: none) {
+  /* 乗せたときだけ出していたボタンを常に出す */
+  .doc-item .doc-delete,
+  .toc-row .toc-copy {
+    visibility: visible;
+  }
+  .doc-item,
+  .toc-row,
+  .slash-item,
+  .todo-item {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* iOS は 16px 未満の入力欄にフォーカスすると画面を拡大するので、入力欄は 16px にする */
+  .doc-search,
+  .find-input,
+  .replace-input,
+  .table-picker-input,
+  .raw,
+  .code-block-lang {
+    font-size: 16px;
+  }
+  .prose {
+    font-size: 16px;
+  }
+  .table-add {
+    opacity: 1;
+  }
+  .table-add-row {
+    height: 26px;
+  }
+  .prose .tableWrapper {
+    margin-bottom: 34px;
+  }
+  .table-add-col {
+    width: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .toc-pane {
+    transition: none;
   }
 }
 
